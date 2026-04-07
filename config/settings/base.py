@@ -41,13 +41,14 @@ INSTALLED_APPS = [
     "apps.api",
     "apps.extension",
     "apps.file",
-    "apps.page",
+    "apps.core",
     "apps.parser",
     "apps.property",
     "apps.search",
     "apps.special",
     "apps.template",
     "apps.user",
+    "apps.webui"
 ]
 
 MIDDLEWARE = [
