@@ -1,11 +1,11 @@
 from django.db import models
 
-from apps.core.models.page import Page
+from apps.user.models import user
 
 
 class PropRevision(models.Model):
     page = models.ForeignKey(
-        Page,
+        "Page",
         on_delete=models.DO_NOTHING,
         related_name='prop_revisions',
         verbose_name="Pageid related"
@@ -14,9 +14,9 @@ class PropRevision(models.Model):
 
     content = models.JSONField(verbose_name="Property")
     author = models.ForeignKey(
-        'User',
+        'user.WikiUser',
         on_delete=models.DO_NOTHING,
-        related_name='revision',
+        related_name='prop_revision',
         verbose_name="Author"
     )
     deleted = models.BooleanField(default=False, verbose_name="Deleted")

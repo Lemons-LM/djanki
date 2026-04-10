@@ -17,4 +17,4 @@ class PageTitleIndex(models.Model):
         unique_together = ('page', 'title')
 
     def __str__(self):
-        return f"Index: {self.title} -> {self.page.used_title}"
+        return f"Index: {self.title} -> {self.page.current_title}"

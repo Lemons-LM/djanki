@@ -1,11 +1,11 @@
 from django.db import models
 
-from apps.core.models.page import Page
+from apps.user.models import user
 
 
 class PageRevision(models.Model):
     page = models.ForeignKey(
-        Page,
+        'Page',
         on_delete=models.DO_NOTHING,
         related_name='revisions',
         verbose_name="Pageid related"
@@ -13,7 +13,7 @@ class PageRevision(models.Model):
 
     content = models.TextField(verbose_name="Text")
     author = models.ForeignKey(
-        'User',
+        'user.WikiUser',
         on_delete=models.DO_NOTHING,
         related_name='revision',
         verbose_name="Author"

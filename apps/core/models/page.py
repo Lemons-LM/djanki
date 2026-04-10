@@ -3,10 +3,11 @@ from django.utils import timezone
 
 from apps.core.models.prop_revision import PropRevision
 from apps.core.models.revision import PageRevision
+from apps.user.models import WikiUser
 
 
 class Page(models.Model):
-    used_title = models.CharField(max_length=255, verbose_name="页面标题")
+    current_title = models.CharField(max_length=255, verbose_name="页面标题")
 
     titles = models.ForeignKey(
         'PageTitleIndex',
@@ -41,7 +42,7 @@ class Page(models.Model):
         verbose_name_plural = "All Pages"
 
     def __str__(self):
-        return self.title
+        return self.current_title
 
     def get_all_revs(self):
         return self.revisions.all().order_by('-key')
@@ -49,7 +50,7 @@ class Page(models.Model):
     def get_all_property_revs(self):
         return self.prop_revisions.all().order_by('-key')
 
-    def new_rev(self, *, content_data: str, author: 'User', edit_comment: str = '', **kwargs):
+    def new_rev(self, *, content_data: str, author: 'WikiUser', edit_comment: str = '', **kwargs):
         rev = PageRevision.objects.create(
             page=self,
             content=content_data,
@@ -64,7 +65,7 @@ class Page(models.Model):
 
         return rev
 
-    def new_prop_rev(self, prop_data,author: 'User', edit_comment: str = '', **kwargs):
+    def new_prop_rev(self, prop_data,author: 'WikiUser', edit_comment: str = '', **kwargs):
         prop_rev = PropRevision.objects.create(
             page=self,
             content=prop_data,
