@@ -85,7 +85,7 @@ class Migration(migrations.Migration):
                 ("phone", models.CharField(blank=True, max_length=20)),
                 ("real_name", models.CharField(blank=True, max_length=100)),
                 ("is_blocked", models.BooleanField(default=False)),
-                ("block_page", models.IntegerField(default=None, null=True)),
+                ("block_page", models.BigIntegerField(default=None, null=True)),
                 ("block_date_start", models.DateTimeField(null=True)),
                 ("block_date_end", models.DateTimeField(null=True)),
                 ("is_deleted", models.BooleanField(default=False)),

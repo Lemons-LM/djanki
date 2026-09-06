@@ -24,7 +24,6 @@ class Page(models.Model):
         related_name='+',
         verbose_name="Current revision"
     )
-
     current_property_revision = models.ForeignKey(
         'PropRevision',
         on_delete=models.DO_NOTHING,
@@ -33,7 +32,8 @@ class Page(models.Model):
         related_name='+',
         verbose_name="Current property revision"
     )
-
+    is_deleted = models.BooleanField(default=False)
+    is_suppressed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -43,6 +43,9 @@ class Page(models.Model):
 
     def __str__(self):
         return self.current_title
+
+    def set_attr(self, name, value):
+        setattr(self, name, value)
 
     def get_all_revs(self):
         return self.revisions.all().order_by('-key')
