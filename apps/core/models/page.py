@@ -1,36 +1,35 @@
-from django.db import models
-from django.utils import timezone
+"""Page identity and current-state pointers."""
 
-from apps.core.models.prop_revision import PropRevision
-from apps.core.models.revision import PageRevision
-from apps.user.models import WikiUser
+from django.db import models
+
+from apps.core.constants import ProtectionLevel
 
 
 class Page(models.Model):
-    current_title = models.CharField(max_length=255, verbose_name="页面标题")
+    """A wiki page.
 
-    titles = models.ForeignKey(
-        'PageTitleIndex',
-        on_delete=models.DO_NOTHING,
-        related_name='+',
-        verbose_name="Page title"
-    )
-    protection = models.CharField(default="", verbose_name="Protected")
+    The complete page state lives in the current revision's slots. ``current_revision``
+    is nullable only during the creation transaction; the page service sets it before
+    committing.
+    """
+
+    namespace = models.PositiveSmallIntegerField(default=0, db_index=True)
     current_revision = models.ForeignKey(
-        'PageRevision',
-        on_delete=models.DO_NOTHING,
-        null=False,
-        blank=False,
-        related_name='+',
-        verbose_name="Current revision"
+        "Revision",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="current_for_pages",
+        verbose_name="Current revision",
     )
-    current_property_revision = models.ForeignKey(
-        'PropRevision',
-        on_delete=models.DO_NOTHING,
-        null=False,
-        blank=False,
-        related_name='+',
-        verbose_name="Current property revision"
+    revision_count = models.PositiveBigIntegerField(default=0)
+    redirect_target = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="redirect_sources",
+        verbose_name="Redirect target",
     )
     is_deleted = models.BooleanField(default=False)
     is_suppressed = models.BooleanField(default=False)
@@ -39,46 +38,63 @@ class Page(models.Model):
 
     class Meta:
         verbose_name = "Page"
-        verbose_name_plural = "All Pages"
+        verbose_name_plural = "Pages"
+        permissions = [
+            ("edit_page", "Can edit pages"),
+            ("move_page", "Can move pages"),
+            ("protect_page", "Can protect pages"),
+            ("suppress_page", "Can suppress pages"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(namespace__gte=0),
+                name="page_namespace_nonnegative",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["namespace", "is_deleted"], name="idx_page_ns_deleted"),
+            models.Index(fields=["is_deleted", "-updated_at"], name="idx_page_recent"),
+        ]
 
     def __str__(self):
-        return self.current_title
+        return self.primary_title or f"Page {self.pk}"
 
-    def set_attr(self, name, value):
-        setattr(self, name, value)
+    @property
+    def primary_binding(self):
+        """Return the active primary title binding, if any."""
+        return self.title_bindings.filter(
+            is_primary=True,
+            released_at__isnull=True,
+        ).first()
 
-    def get_all_revs(self):
-        return self.revisions.all().order_by('-key')
+    @property
+    def primary_title(self):
+        """Return the active primary display title, or ``None``."""
+        binding = self.primary_binding
+        return binding.display_title if binding else None
 
-    def get_all_property_revs(self):
-        return self.prop_revisions.all().order_by('-key')
+    @property
+    def canonical_title_key(self):
+        """Return the normalized key of the active primary title, or ``None``."""
+        binding = self.primary_binding
+        return binding.normalized_title if binding else None
 
-    def new_rev(self, *, content_data: str, author: 'WikiUser', edit_comment: str = '', **kwargs):
-        rev = PageRevision.objects.create(
-            page=self,
-            content=content_data,
-            author=author,
-            created_at=timezone.now(),
-            comment=edit_comment,
-            ** kwargs
-        )
+    @property
+    def is_redirect(self) -> bool:
+        """Return whether this page is a redirect."""
+        return self.redirect_target_id is not None
 
-        self.current_revision = rev
-        self.save(update_fields=['current_revision', 'updated_at'])
+    def protection_level(self, action: str) -> str:
+        """Return the active protection level for ``action`` (default: open)."""
+        protection = self.protections.filter(action=action).first()
+        if protection is not None and protection.is_active:
+            return protection.level
+        return ProtectionLevel.OPEN
 
-        return rev
-
-    def new_prop_rev(self, prop_data,author: 'WikiUser', edit_comment: str = '', **kwargs):
-        prop_rev = PropRevision.objects.create(
-            page=self,
-            content=prop_data,
-            author=author,
-            created_at=timezone.now(),
-            comment=edit_comment,
-            ** kwargs
-        )
-
-        self.current_property_revision = prop_rev
-        self.save(update_fields=['current_property_revision', 'updated_at'])
-
-        return prop_rev
+    @property
+    def latest_slots(self) -> dict:
+        """Return a ``role -> Content`` mapping for the current revision."""
+        revision = self.current_revision
+        if revision is None:
+            return {}
+        return {slot.role: slot.content for slot in revision.slots.select_related("content")}

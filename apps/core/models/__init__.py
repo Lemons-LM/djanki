@@ -1,4 +1,20 @@
+"""Core domain models."""
+
+from .content import Content
 from .page import Page
-from .prop_revision import PropRevision
-from .revision import PageRevision
-from .page_title import PageTitleIndex
+from .protection import PageProtection, ProtectionLog
+from .revision import Revision
+from .site import SiteConfig
+from .slot import RevisionSlot
+from .title_binding import TitleBinding
+
+__all__ = [
+    "Content",
+    "Page",
+    "PageProtection",
+    "ProtectionLog",
+    "Revision",
+    "RevisionSlot",
+    "SiteConfig",
+    "TitleBinding",
+]

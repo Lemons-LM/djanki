@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sqlite:
+    name: SQLite / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dependencies
+        run: uv sync --extra dev --frozen
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format check
+        run: uv run black --check .
+      - name: Django checks
+        run: uv run python manage.py check
+      - name: Migration drift
+        run: uv run python manage.py makemigrations --check --dry-run
+      - name: Type check
+        run: uv run mypy apps config
+      - name: Tests
+        run: uv run pytest -q
+
+  postgres:
+    name: PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: djanki
+          POSTGRES_USER: djanki
+          POSTGRES_PASSWORD: djanki
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      DJANGO_SECRET_KEY: ci-secret-key
+      DB_NAME: djanki
+      DB_USER: djanki
+      DB_PASSWORD: djanki
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dependencies
+        run: uv sync --extra dev --frozen
+      - name: Django checks
+        run: uv run python manage.py check
+      - name: Tests
+        run: uv run pytest -q --ds=config.settings.test

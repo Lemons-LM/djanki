@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,9 +26,11 @@ SECRET_KEY = "django-insecure-0(eu@n5qp5g=!fq3xmm-69-_51_s*(v-#ie5w+3&8n-9(^iogk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: list[str] = []
 
-AUTH_USER_MODEL = 'user.WikiUser'
+AUTH_USER_MODEL = "user.WikiUser"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # Application definition
@@ -39,6 +42,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # third-party
+    "rest_framework",
+    "rest_framework.authtoken",
+    "drf_spectacular",
     # my apps
     "apps.api",
     "apps.extension",
@@ -50,7 +57,7 @@ INSTALLED_APPS = [
     "apps.special",
     "apps.template",
     "apps.user",
-    "apps.webui"
+    "apps.webui",
 ]
 
 MIDDLEWARE = [
@@ -68,8 +75,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates']
-        ,
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -90,8 +96,28 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": os.environ.get("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"),
     }
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 50,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "apps.api.errors.api_exception_handler",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Djanki API",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 

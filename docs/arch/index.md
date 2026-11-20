@@ -6,3 +6,4 @@ WARNING: If you write a code, you MUST write arch in the specific doc file in th
 - [Project's Architech](project.md): All the Project's Architech]
 - [App's Architech](apps.md): All the Django Apps' Architech
 - [New Architech](new_arch.md): Compare to MediaWiki, what's new in Djanki?
+- [Architecture Decisions](decisions/index.md): ADRs for the revision, title, permission and API model
